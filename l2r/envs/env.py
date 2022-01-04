@@ -208,6 +208,10 @@ class RacingEnv(gym.Env):
         # misc
         self.last_restart = time.time()
 
+        # Box(low=np.array(MIN_OBS_ARR), high=np.array(MAX_OBS_ARR)) #todo normalized base on observation min maxL)
+        self.observation_space = Box(low=np.array(MIN_OBS_ARR), high=np.array(MAX_OBS_ARR), shape=(30, ), dtype=np.float64)
+        
+
     def make(
         self,
         level=False,
@@ -309,6 +313,10 @@ class RacingEnv(gym.Env):
 
         self.multimodal = multimodal if multimodal else self.multimodal
 
+
+
+        self.observation_space = Box(low=-float('inf'), high=float('inf'), shape=(30, ), dtype=np.float64)
+        
     def _restart_simulator(self):
         """Periodically need to restart the container for long runtimes"""
         print("[RacingEnv] Periodic simulator restart")
@@ -362,6 +370,7 @@ class RacingEnv(gym.Env):
             info["track_idx"] = self.nearest_idx
             info["waypoints"] = self._waypoints()
 
+        observation = _data
         return observation, reward, done, info
 
     def reset(self, level=None, random_pos=False, segment_pos=True):
@@ -444,6 +453,8 @@ class RacingEnv(gym.Env):
         _data, _img = _observation
         observation = _observation if self.multimodal else _img
         self.tracker.reset(start_idx=self.nearest_idx, segmentwise=segment_pos)
+
+        return _data
 
         if self.provide_waypoints:
             print(
@@ -540,6 +551,16 @@ class RacingEnv(gym.Env):
         pose[16], pose[15], pose[17] = enu_x, enu_y, enu_z
 
         self.nearest_idx = self.kdtree.query(np.asarray([enu_x, enu_y]))[1]
+
+
+        lookAhead = 3
+        for i in range(lookAhead):
+            self.nearest_idx = (self.nearest_idx + (i + 1) * 4) % self.n_indices #:_)
+            centerx, centery = self.centerline_arr[self.nearest_idx]
+            print("--" + str(centery - enu_y))
+            pose[16 + i] = centery - enu_y
+        
+
         self.tracker.update(self.nearest_idx, enu_x, enu_y, enu_z, yaw, a, bp)
 
         return (pose, self.imgs)
@@ -580,6 +601,9 @@ class RacingEnv(gym.Env):
         self.geo_location = utils.GeoLocation(self.ref_point)
         self.n_indices = len(self.centerline_arr)
         self.kdtree = KDTree(self.centerline_arr)
+
+        # self.kdtree_outside = KDTree(self.centerline_arr)
+        # self.kdtree_inside = KDTree(self.centerline_arr)
 
         local_segment_idxs_manual = self.poses_to_local_segment_idxs(self.segment_poses)
         local_segment_idxs_linspace = np.round(
