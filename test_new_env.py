@@ -1,4 +1,5 @@
-from l2r.envs.env import RacingEnv
+# from l2r.envs.env import RacingEnv
+from l2r.envs.newenv import RacingEnv
 from config import SubmissionConfig, EnvConfig, SimulatorConfig
 from stable_baselines3.common.env_checker import check_env
 import gym
@@ -21,7 +22,7 @@ from stable_baselines3.common.env_checker import check_env
 env = RacingEnv(EnvConfig.__dict__, SimulatorConfig.__dict__)
 env.make()
 # print(env.reset())
-# check_env(env)
+check_env(env)
 
 net_arch=[dict(pi=[512, 512, 32], vf=[512, 512, 32])]
 

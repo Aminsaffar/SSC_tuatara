@@ -58,27 +58,69 @@ N_SEGMENTS = 10
 
 # Pose observation space boundaries
 MIN_OBS_ARR = [
-    -1.0, -1.0, -1.0,  # steering, gear, mode
-    -200.0, -200.0, -10.0,  # velocity
-    -100.0, -100.0, -100.0,  # acceleration
-    -1.0, -1.0, -5.0,  # angular velocity
-    -6.2832, -6.2832, -6.2832,  # yaw, pitch, roll
-    -2000.0, 2000.0, 2000.0,  # location coordinates in the format (y, x, z)
-    -2000.0, -2000.0, -2000.0, -2000.0,  # rpm (per wheel)
-    -1.0, -1.0, -1.0, -1.0,  # brake (per wheel)
-    -1.0, -1.0, -1300.0, -1300.0,  # torq (per wheel)
+    -1.0,
+    -1.0,
+    -1.0,  # steering, gear, mode
+    -200.0,
+    -200.0,
+    -10.0,  # velocity
+    -100.0,
+    -100.0,
+    -100.0,  # acceleration
+    -1.0,
+    -1.0,
+    -5.0,  # angular velocity
+    -6.2832,
+    -6.2832,
+    -6.2832,  # yaw, pitch, roll
+    -2000.0,
+    2000.0,
+    2000.0,  # location coordinates in the format (y, x, z)
+    -2000.0,
+    -2000.0,
+    -2000.0,
+    -2000.0,  # rpm (per wheel)
+    -1.0,
+    -1.0,
+    -1.0,
+    -1.0,  # brake (per wheel)
+    -1.0,
+    -1.0,
+    -1300.0,
+    -1300.0,  # torq (per wheel)
 ]
 
 MAX_OBS_ARR = [
-    1.0, 4.0, 1.0,  # steering, gear, mode
-    200.0, 200.0, 10.0,  # velocity
-    100.0, 100.0, 100.0,  # acceleration
-    1.0, 1.0, 5.0,  # angular velocity
-    6.2832, 6.2832, 6.2832,  # yaw, pitch, roll
-    2000.0, 2000.0, 2000.0,  # location coordinates in the format (y, x, z)
-    2500.0, 2500.0, 2500.0, 2500.0,  # rpm (per wheel)
-    1.0, 1.0, 2.0, 2.0,  # brake (per wheel)
-    1.0, 1.0, 1300.0, 1300.0,  # torq (per wheel)
+    1.0,
+    4.0,
+    1.0,  # steering, gear, mode
+    200.0,
+    200.0,
+    10.0,  # velocity
+    100.0,
+    100.0,
+    100.0,  # acceleration
+    1.0,
+    1.0,
+    5.0,  # angular velocity
+    6.2832,
+    6.2832,
+    6.2832,  # yaw, pitch, roll
+    2000.0,
+    2000.0,
+    2000.0,  # location coordinates in the format (y, x, z)
+    2500.0,
+    2500.0,
+    2500.0,
+    2500.0,  # rpm (per wheel)
+    1.0,
+    1.0,
+    2.0,
+    2.0,  # brake (per wheel)
+    1.0,
+    1.0,
+    1300.0,
+    1300.0,  # torq (per wheel)
 ]
 
 # Racetrack IDs
@@ -150,19 +192,8 @@ class RacingEnv(gym.Env):
         controller_kwargs = env_kwargs["controller_kwargs"]
         reward_kwargs = env_kwargs["reward_kwargs"]
         action_if_kwargs = env_kwargs["action_if_kwargs"]
-        pose_if_kwargs = env_kwargs["pose_if_kwargs"]
-        camera_if_kwargs = env_kwargs["camera_if_kwargs"]
         cameras = env_kwargs["cameras"]
-
-        camera_sensor_name = [c for c in self.sensors if "Camera" in c][0]
-        self.camera_dims = {
-            camera_sensor_name: {  # 'CameraFrontalRGB'
-                "Width": self.camera_params["Width"],
-                "Height": self.camera_params["Height"],
-            }
-        }
-
-        # pdb.set_trace()
+        pose_if_kwargs = env_kwargs["pose_if_kwargs"]
 
         # class init
         self.controller = SimulatorController(**controller_kwargs)
@@ -171,29 +202,11 @@ class RacingEnv(gym.Env):
 
         # self.cameras = [(camera_sensor_name,
         #    utils.CameraInterface(**camera_if_kwargs))]
-
         self.cameras = [
-            (name, params, utils.CameraInterface(addr=params["Addr"]))
+            (name, params, utils.CameraInterface(**params))
             for name, params in cameras.items()
+            if name in self.sensors
         ]
-
-        # self.cameras = [(camera_sensor_name, self.camera_dims[camera_sensor_name],
-        #    utils.CameraInterface(**camera_if_kwargs))]
-
-        if segm_if_kwargs:
-            self.cameras.append(
-                ("CameraFrontSegm", utils.CameraInterface(**segm_if_kwargs))
-            )
-
-        if birdseye_if_kwargs:
-            self.cameras.append(
-                ("CameraBirdsEye", utils.CameraInterface(**birdseye_if_kwargs))
-            )
-
-        if birdseye_segm_if_kwargs:
-            self.cameras.append(
-                ("CameraBirdsEyeSegm", utils.CameraInterface(**birdseye_segm_if_kwargs))
-            )
 
         self.reward = (
             GranTurismo(**reward_kwargs)
@@ -208,10 +221,6 @@ class RacingEnv(gym.Env):
         # misc
         self.last_restart = time.time()
 
-        # Box(low=np.array(MIN_OBS_ARR), high=np.array(MAX_OBS_ARR)) #todo normalized base on observation min maxL)
-        self.observation_space = Box(low=np.array(MIN_OBS_ARR), high=np.array(MAX_OBS_ARR), shape=(30, ), dtype=np.float64)
-        
-
     def make(
         self,
         level=False,
@@ -225,6 +234,7 @@ class RacingEnv(gym.Env):
         vehicle_params=None,
         multi_agent=False,
         remake=False,
+        cameras=False,
     ):
         """Unlike many environments, make does not start the simulator process.
         It does, however, configure the simulator's settings. The simulator
@@ -247,32 +257,15 @@ class RacingEnv(gym.Env):
         self.sensors = sensors if sensors else self.sensors
         self.driver_params = driver_params if driver_params else self.driver_params
         self.camera_params = camera_params if camera_params else self.camera_params
-
-        camera_sensor_name = [c for c in self.sensors if "Camera" in c][0]
-        self.camera_dims = {
-            camera_sensor_name: {  # 'CameraFrontalRGB'
-                "width": self.camera_params["Width"],
-                "height": self.camera_params["Height"],
-            }
-        }
-
-        if segm_params:
-            self.camera_dims["CameraFrontSegm"] = {
-                "width": segm_params["Width"],
-                "height": segm_params["Height"],
-            }
-
-        if birdseye_params:
-            self.camera_dims["CameraBirdsEye"] = {
-                "width": birdseye_params["Width"],
-                "height": birdseye_params["Height"],
-            }
-
-        if birdseye_segm_params:
-            self.camera_dims["CameraBirdsEyeSegm"] = {
-                "width": birdseye_segm_params["Width"],
-                "height": birdseye_segm_params["Height"],
-            }
+        self.cameras = (
+            [
+                (name, params, utils.CameraInterface(**params))
+                for name, params in cameras.items()
+                if name in self.sensors
+            ]
+            if cameras
+            else self.cameras
+        )
 
         if type(level) == str:
             self.level = level
@@ -313,10 +306,6 @@ class RacingEnv(gym.Env):
 
         self.multimodal = multimodal if multimodal else self.multimodal
 
-
-
-        self.observation_space = Box(low=-float('inf'), high=float('inf'), shape=(30, ), dtype=np.float64)
-        
     def _restart_simulator(self):
         """Periodically need to restart the container for long runtimes"""
         print("[RacingEnv] Periodic simulator restart")
@@ -370,7 +359,6 @@ class RacingEnv(gym.Env):
             info["track_idx"] = self.nearest_idx
             info["waypoints"] = self._waypoints()
 
-        observation = _data
         return observation, reward, done, info
 
     def reset(self, level=None, random_pos=False, segment_pos=True):
@@ -454,8 +442,6 @@ class RacingEnv(gym.Env):
         observation = _observation if self.multimodal else _img
         self.tracker.reset(start_idx=self.nearest_idx, segmentwise=segment_pos)
 
-        return _data
-
         if self.provide_waypoints:
             print(
                 f"WARNING: 'self.provide_waypoints' is set to {self.provide_waypoints}"
@@ -517,10 +503,9 @@ class RacingEnv(gym.Env):
 
         if self._multimodal:
             _spaces["sensors"] = Box(
-                low=np.array(MIN_OBS_ARR), high=np.array(MAX_OBS_ARR)
+                low=np.array(MIN_OBS_ARR), high=np.array(MAX_OBS_ARR), dtype=np.float64
             )
         self.observation_space = Dict(_spaces)
-        # print(self.observation_space)
 
     def _observe(self):
         """Perform an observation action by getting the most recent data from
@@ -551,16 +536,6 @@ class RacingEnv(gym.Env):
         pose[16], pose[15], pose[17] = enu_x, enu_y, enu_z
 
         self.nearest_idx = self.kdtree.query(np.asarray([enu_x, enu_y]))[1]
-
-
-        lookAhead = 3
-        for i in range(lookAhead):
-            self.nearest_idx = (self.nearest_idx + (i + 1) * 4) % self.n_indices #:_)
-            centerx, centery = self.centerline_arr[self.nearest_idx]
-            print("--" + str(centery - enu_y))
-            pose[16 + i] = centery - enu_y
-        
-
         self.tracker.update(self.nearest_idx, enu_x, enu_y, enu_z, yaw, a, bp)
 
         return (pose, self.imgs)
@@ -601,9 +576,6 @@ class RacingEnv(gym.Env):
         self.geo_location = utils.GeoLocation(self.ref_point)
         self.n_indices = len(self.centerline_arr)
         self.kdtree = KDTree(self.centerline_arr)
-
-        # self.kdtree_outside = KDTree(self.centerline_arr)
-        # self.kdtree_inside = KDTree(self.centerline_arr)
 
         local_segment_idxs_manual = self.poses_to_local_segment_idxs(self.segment_poses)
         local_segment_idxs_linspace = np.round(
