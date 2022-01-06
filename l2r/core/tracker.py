@@ -200,9 +200,9 @@ class ProgressTracker(object):
 
         closest_border_shft = self.segment_tree.query([shifted_idx])
         closest_border_abs = self.segment_tree.query([absolute_idx])
-        print(f"[Tracker] Track index: {absolute_idx}")
-        print(f"[Tracker] Current segment: {self.current_segment}")
-        print(f"[Tracker] Distance to closest segment border: ({closest_border_abs[0]}, {closest_border_abs[1]})")
+        # print(f"[Tracker] Track index: {absolute_idx}")
+        # print(f"[Tracker] Current segment: {self.current_segment}")
+        # print(f"[Tracker] Distance to closest segment border: ({closest_border_abs[0]}, {closest_border_abs[1]})")
 
         if (
             closest_border_abs[0] < 50
@@ -230,8 +230,8 @@ class ProgressTracker(object):
                 else False
             )
 
-        print(f"[Tracker] Segment success: {self.segment_success}")
-        print(f"[Tracker] Crossed halfway point: {self.halfway_flag}\n")
+        # print(f"[Tracker] Segment success: {self.segment_success}")
+        # print(f"[Tracker] Crossed halfway point: {self.halfway_flag}\n")
 
         return current_segment
 

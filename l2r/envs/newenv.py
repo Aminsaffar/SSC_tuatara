@@ -7,6 +7,7 @@
 # ========================================================================= #
 
 import numpy as np
+import math
 from gym.spaces import Box
 
 
@@ -40,6 +41,8 @@ class RacingEnv(env.RacingEnv):
             multi_agent,
         )
 
+        self.maxV = 0
+
     
 
     def make(
@@ -70,7 +73,9 @@ class RacingEnv(env.RacingEnv):
             multi_agent,
             remake,
         )
-        self.observation_space = Box(low=-float('inf'), high=float('inf'), shape=(30, ), dtype=np.float64)
+        # self.observation_space = Box(low=-float('inf'), high=float('inf'), shape=(30, ), dtype=np.float64)
+        self.observation_space = Box(low=-float(-1.0), high=float(1.0), shape=(30, ), dtype=np.float64)
+
 
    
 
@@ -83,11 +88,11 @@ class RacingEnv(env.RacingEnv):
         return observation, reward, done, info
 
     def reset(self, level=None, random_pos=False, segment_pos=True):
+        self.maxV = 0
         observation = env.RacingEnv.reset(self, level, random_pos, segment_pos)
         _data, _imgs = observation
         observation = _data[0]
-        print(observation)
-        
+        # print(observation)
         return observation
 
 
@@ -98,10 +103,43 @@ class RacingEnv(env.RacingEnv):
 
         lookAhead = 3
         for i in range(lookAhead):
-            self.nearest_idx = (self.nearest_idx + (i + 1) * 4) % self.n_indices #:_)
+            self.nearest_idx = (self.nearest_idx + (i + 1) * 2) % self.n_indices #:_)
             centerx, centery = self.centerline_arr[self.nearest_idx]
-            print("--" + str(centery - enu_y))
+            # print("--" + str(centery - enu_y))
             pose[15 + i] = centery - enu_y
         
-
+        pose = self.obs_scallar(pose)
         return (pose, self.imgs)
+
+    def obs_scallar(self, observation):
+        env.MIN_OBS_ARR[15] = -10.0  
+        env.MIN_OBS_ARR[16] = -10.0
+        env.MIN_OBS_ARR[17] = -10.0
+        env.MAX_OBS_ARR[15] = 10.0  
+        env.MAX_OBS_ARR[16] = 10.0
+        env.MAX_OBS_ARR[17] = 10.0   
+        for i in range(len(observation)):
+            observation[i] = ((observation[i] -  env.MIN_OBS_ARR[i]) / (env.MAX_OBS_ARR[i] - env.MIN_OBS_ARR[i]))
+            observation[i] = (observation[i] * 2) - 1
+
+        return observation
+
+
+
+
+    def _is_complete(self, observation):
+        is_complete, info = env.RacingEnv._is_complete(self, observation)
+
+        _data, _imgs = observation
+
+        vx , vy, vz = _data[3], _data[4], _data[5]
+        v = math.sqrt(vx**2 + vy**2)
+        # print(v)
+        if(v < 0.01 and self.maxV > 0.01):
+            is_complete = True
+            print("early stop!!")
+
+        if(v > self.maxV):
+            self.maxV = v
+        
+        return is_complete, info
