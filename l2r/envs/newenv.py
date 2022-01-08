@@ -102,11 +102,25 @@ class RacingEnv(env.RacingEnv):
         enu_x, enu_y, enu_z = pose[16], pose[15], pose[17] 
 
         lookAhead = 3
-        for i in range(lookAhead):
-            self.nearest_idx = (self.nearest_idx + (i + 1) * 2) % self.n_indices #:_)
-            centerx, centery = self.centerline_arr[self.nearest_idx]
-            # print("--" + str(centery - enu_y))
-            pose[15 + i] = centery - enu_y
+        # for i in range(lookAhead):
+        #     nix = (self.nearest_idx + (i + 1) * 2) % self.n_indices #:_)
+        #     centerx, centery = self.centerline_arr[nix]
+        #     # print("--" + str(centery - enu_y))
+        #     pose[15 + i] = centery - enu_y
+
+        nix = (self.nearest_idx) % self.n_indices #:_)
+        centerx, centery = self.centerline_arr[nix]
+
+        myradians = math.atan2(centery-enu_y, centerx-enu_x)
+        # mydegrees = math.degrees(myradians)
+
+
+        # print(centerx, centery , enu_x, enu_y , myradians, pose[12])
+
+        # print("--" + str(centery - enu_y))
+        # pose[15] = centery - enu_y
+        pose[17] = myradians
+
         
         pose = self.obs_scallar(pose)
         return (pose, self.imgs)
@@ -134,12 +148,16 @@ class RacingEnv(env.RacingEnv):
 
         vx , vy, vz = _data[3], _data[4], _data[5]
         v = math.sqrt(vx**2 + vy**2)
-        # print(v)
-        if(v < 0.01 and self.maxV > 0.01):
-            is_complete = True
-            print("early stop!!")
+
+
 
         if(v > self.maxV):
             self.maxV = v
         
+        # print(v)
+
+        if(v < 0.01 and self.maxV > 0.018):
+            is_complete = True
+            print("early stop!!")
+
         return is_complete, info
