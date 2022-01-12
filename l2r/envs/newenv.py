@@ -99,30 +99,32 @@ class RacingEnv(env.RacingEnv):
     def _observe(self):
         pose, self.imgs = env.RacingEnv._observe(self)
 
-        enu_x, enu_y, enu_z = pose[16], pose[15], pose[17] 
+        # enu_x, enu_y, enu_z = pose[16], pose[15], pose[17] 
 
-        lookAhead = 3
+        # lookAhead = 3
         # for i in range(lookAhead):
-        #     nix = (self.nearest_idx + (i + 1) * 2) % self.n_indices #:_)
+        #     nix = (self.nearest_idx + (i) * 2) % self.n_indices #:_)
         #     centerx, centery = self.centerline_arr[nix]
         #     # print("--" + str(centery - enu_y))
         #     pose[15 + i] = centery - enu_y
 
-        nix = (self.nearest_idx) % self.n_indices #:_)
-        centerx, centery = self.centerline_arr[nix]
+        # nix = (self.nearest_idx) % self.n_indices #:_)
+        # centerx, centery = self.centerline_arr[nix]
+        # print(nix, centerx, centery ,  enu_x , enu_y, centery-enu_y, centerx-enu_x)
 
-        myradians = math.atan2(centery-enu_y, centerx-enu_x)
-        # mydegrees = math.degrees(myradians)
+        # myradians = math.atan2(centery-enu_y, centerx-enu_x)
+        # # mydegrees = math.degrees(myradians)
 
 
-        # print(centerx, centery , enu_x, enu_y , myradians, pose[12])
+        # # # print(centerx, centery , enu_x, enu_y , myradians, pose[12])
 
-        # print("--" + str(centery - enu_y))
-        # pose[15] = centery - enu_y
-        pose[17] = myradians
+        # # # print("--" + str(centery - enu_y))
+        # # # pose[15] = centery - enu_y
+        # # pose[17] = myradians
+        # pose[17] = nix
 
         
-        pose = self.obs_scallar(pose)
+        # pose = self.obs_scallar(pose)
         return (pose, self.imgs)
 
     def obs_scallar(self, observation):
@@ -136,6 +138,7 @@ class RacingEnv(env.RacingEnv):
             observation[i] = ((observation[i] -  env.MIN_OBS_ARR[i]) / (env.MAX_OBS_ARR[i] - env.MIN_OBS_ARR[i]))
             observation[i] = (observation[i] * 2) - 1
 
+        observation[17] = (self.nearest_idx) % self.n_indices #:_) option for observed 
         return observation
 
 
