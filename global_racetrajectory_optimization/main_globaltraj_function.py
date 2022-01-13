@@ -77,9 +77,9 @@ def get_beast_map(filename, start_x, start_y): #, start_angle, start_velocity, s
     # lap time calculation table -------------------------------------------------------------------------------------------
     lap_time_mat_opts = {"use_lap_time_mat": False,             # calculate a lap time matrix (diff. top speeds and scales)
                         "gg_scale_range": [0.3, 1.0],          # range of gg scales to be covered
-                        "gg_scale_stepsize": 0.05,             # step size to be applied
+                        "gg_scale_stepsize": 0.01,             # step size to be applied
                         "top_speed_range": [100.0, 150.0],     # range of top speeds to be simulated [in km/h]
-                        "top_speed_stepsize": 5.0,             # step size to be applied
+                        "top_speed_stepsize": 1.0,             # step size to be applied
                         "file": "lap_time_matrix.csv"}         # file name of the lap time matrix (stored in "outputs")
 
     # ----------------------------------------------------------------------------------------------------------------------

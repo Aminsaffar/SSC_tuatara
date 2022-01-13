@@ -6,6 +6,7 @@ import gym
 from gym import Env
 from gym.spaces import Box
 
+from scipy.spatial import KDTree
 import time
 import os
 import math
@@ -18,6 +19,22 @@ import json
 import pandas as pd
 sys.path.insert(1, 'global_racetrajectory_optimization')
 from global_racetrajectory_optimization.main_globaltraj_function import get_beast_map
+
+
+# ##read csv file with ; as delimiter and # as comment and ["#x_m","y_m"] as column names
+# path = pd.read_csv("global_racetrajectory_optimization/outputs/traj_race_cl.csv", delimiter = ';', comment = '#', names = ["s_m", "x_m", "y_m", "psi_rad", "kappa_radpm", "vx_mps", "ax_mps2"])
+# path = path.to_numpy()
+# # print(path)
+# # exit()
+
+
+# points =path[:, 1:3]
+
+# T = KDTree(points)
+# # idx = T.query_ball_point([-27,-30], r=2)
+# idx = T.query([-50,30])[1]
+# print(path[idx])
+# exit()
 
 maxspeed = 0.3
 targetVel = 0.3
@@ -67,34 +84,70 @@ def pathToCsvFormat(pathname, nix = 2):
 
 
   path = pd.DataFrame(centre_data, columns = ['#x_m','y_m'])
-  path['w_tr_right_m'] = 5
-  path['w_tr_left_m'] = 5
+  path['w_tr_right_m'] = 2#5
+  path['w_tr_left_m'] = 2#5
 
   path.to_csv(save_path + pathname + '.csv', index=False)
   return path
 
 
+# pathToCsvFormat('ThruxtonFromGoogle_2')
+# print("start_x" , "start_y", obs[16], obs[15])
+# get_beast_map('ThruxtonFromGoogle_2', obs[16], obs[15])
 
 
-pathToCsvFormat('ThruxtonOfficial')
-print("start_x" , "start_y", obs[16], obs[15])
-get_beast_map('ThruxtonOfficial', obs[16], obs[15])
+
+#read csv file with ; as delimiter and # as comment and ["#x_m","y_m"] as column names
+path = pd.read_csv("global_racetrajectory_optimization/outputs/traj_race_cl.csv", delimiter = ';', comment = '#', names = ["s_m", "x_m", "y_m", "psi_rad", "kappa_radpm", "vx_mps", "ax_mps2"])
+path = path.to_numpy()
+# print(path)
+# exit()
+
+
+points =path[:, 1:3]
+
+
+
+
+T = KDTree(points)
+# idx = T.query_ball_point([1,1], r=2)
+# print(path[idx])
 
 i = 0 
 myradians = 0
 while(not done):
+    # idx = T.query_ball_point([-27,-30], r=2)
+    cur_x , cur_y = obs[16], obs[15]
+    i = T.query([cur_x ,cur_y])[1]
+    # i = i + 1
+    # print(path[idx])
+
+
+    # print(i)
+    # print(path[i])
+    theta = path[i][3]
     # Random action
     # action = env.action_space.sample()
     cu_velx = obs[3]
     delta_to_line = obs[17]
-    targetVel = maxspeed * ((1 - abs(delta_to_line - myradians)))
+    # targetVel = maxspeed * ((1 - abs(delta_to_line - myradians)))
 
-    ax = (targetVel - cu_velx)  * 1
+    # targetVel = path[i][5] * 2. / 3.
+    targetVel = path[i][5] / 2.0
+    print(targetVel, cu_velx)
+    ax = (targetVel - cu_velx) * 2
+    if ax > 1:
+      ax = 1
+    if ax < -1:
+      ax = -1
 
-    
+    # ax = 1
 
+    # ax = path[i][6] * 0.1
+    # print(ax)
+    theta_to_path = math.atan2(cur_y-path[i][2], cur_x-path[i][1])
     myradians =  obs[12]
-    st = -1 *((delta_to_line - myradians)) * 1.5
+    st = -1 * ((-1 * theta - myradians)) * 7#5
     if st > 1:
       st = 1
     if st < -1:
@@ -106,10 +159,10 @@ while(not done):
     obs, reward, done, info = env.step(action)
     
     cur_x , cur_y = obs[16], obs[15]
-    myradians = math.atan2(cur_y-prevy, cur_x-prevx)
+    # myradians = math.atan2(cur_y-prevy, cur_x-prevx)
 
 
-    # print(i , obs[17] , obs[12], st)
+    print(i , -1*theta , myradians, st)
 
     i = i + 1
     
