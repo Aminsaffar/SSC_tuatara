@@ -10,7 +10,8 @@ import numpy as np
 import math
 from gym.spaces import Box
 
-
+import os
+from datetime import datetime
 # import env
 from l2r.envs import env
 
@@ -42,6 +43,7 @@ class RacingEnv(env.RacingEnv):
         )
 
         self.maxV = 0
+        self.trajectoryLog = []
 
     
 
@@ -83,11 +85,28 @@ class RacingEnv(env.RacingEnv):
     def step(self, action):
         observation, reward, done, info = env.RacingEnv.step(self, action)  # update the simulator
         _data, _imgs = observation
-        observation = _data
         
+        #log trajectory
+        self.trajectoryLog.append(
+            {
+                "action" : action,
+                "obs" : observation,
+                "rewared" : reward,
+                "done" : done,
+                "info" : info
+            }
+        );
+        observation = _data
         return observation, reward, done, info
 
     def reset(self, level=None, random_pos=False, segment_pos=True):
+        #save trajectory
+        trajectoryDir = "EnvTrajectory/"
+        os.makedirs(trajectoryDir, exist_ok=True)
+        filename = trajectoryDir + datetime.utcnow().strftime('%Y-%m-%d %H-%M-%S %f') + ".npy"
+        np.save(filename,  self.trajectoryLog)    
+        self.trajectoryLog = []
+
         self.maxV = 0
         observation = env.RacingEnv.reset(self, level, random_pos, segment_pos)
         _data, _imgs = observation

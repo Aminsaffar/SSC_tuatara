@@ -119,7 +119,7 @@ while(not done):
     # idx = T.query_ball_point([-27,-30], r=2)
     cur_x , cur_y = obs[16], obs[15]
     i = T.query([cur_x ,cur_y])[1]
-    # i = i + 1
+    i = i + 3
     # print(path[idx])
 
 
@@ -133,8 +133,8 @@ while(not done):
     # targetVel = maxspeed * ((1 - abs(delta_to_line - myradians)))
 
     # targetVel = path[i][5] * 2. / 3.
-    targetVel = path[i][5] / 2.0
-    print(targetVel, cu_velx)
+    targetVel = path[i][5] / 2
+    # print(targetVel, cu_velx)
     ax = (targetVel - cu_velx) * 2
     if ax > 1:
       ax = 1
@@ -147,7 +147,7 @@ while(not done):
     # print(ax)
     theta_to_path = math.atan2(cur_y-path[i][2], cur_x-path[i][1])
     myradians =  obs[12]
-    st = -1 * ((-1 * theta - myradians)) * 7#5
+    st = -1 * ((-1 * theta - myradians)) * 9#5
     if st > 1:
       st = 1
     if st < -1:
@@ -160,9 +160,11 @@ while(not done):
     
     cur_x , cur_y = obs[16], obs[15]
     # myradians = math.atan2(cur_y-prevy, cur_x-prevx)
-
-
-    print(i , -1*theta , myradians, st)
+    delta_x = cur_x - path[i][1]
+    delta_y = cur_y - path[i][2]
+    print(i , -1*theta , myradians, st, delta_x, delta_y)
 
     i = i + 1
     
+
+obs = env.reset()
