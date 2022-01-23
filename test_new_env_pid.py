@@ -110,8 +110,7 @@ points =path[:, 1:3]
 
 
 T = KDTree(points)
-# idx = T.query_ball_point([1,1], r=2)
-# print(path[idx])
+
 
 i = 0 
 myradians = 0
