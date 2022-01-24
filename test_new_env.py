@@ -1,5 +1,5 @@
 # from l2r.envs.env import RacingEnv
-from l2r.envs.newenv import RacingEnv
+from l2r.envs.folowTrajectoryEnv import RacingEnv
 from config import SubmissionConfig, EnvConfig, SimulatorConfig
 from stable_baselines3.common.env_checker import check_env
 import gym
@@ -23,6 +23,49 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.monitor import Monitor
 
 
+from gym import Wrapper
+
+
+class FrameSkipWrapper(Wrapper):
+    '''
+    Implements a frame kipping wrapper.
+    As described by Mnih et al., it returns only every 'k-th' frame
+    '''
+    def __init__(self, env=None, k=4):
+        super(FrameSkipWrapper, self).__init__(env)
+        self._k = k
+
+    def step(self, action):
+        r = 0.0
+        done = False
+        # print("frame skip!")
+
+        # Step the env `_k` times and return the last obs
+        for _ in range(self._k):
+            # print("do")
+            obs, reward, done, info = self.env.step(action)
+            # print("skippied")
+            r += reward
+            if done:
+                break
+        return obs, r, done, info
+
+
+class ActionEnhancer(Wrapper):
+    '''
+    '''
+    def __init__(self, env=None):
+        super(ActionEnhancer, self).__init__(env)
+
+    def step(self, action):
+        acc = action[1]
+        if acc < 0:
+          acc = acc / 2.0
+        # newacc = acc * 6.0 if acc > 0 else acc* (-1.0 * -16.0)
+        # print(acc, newacc)
+        action[1] = acc
+        obs, reward, done, info = self.env.step(action)
+        return obs, reward, done, info
 
 class SaveOnBestTrainingRewardCallback(BaseCallback):
     """
@@ -38,7 +81,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.log_dir = log_dir
-        self.save_path = os.path.join(log_dir, 'ppo_autosave_ssc')
+        self.save_path = os.path.join(log_dir, 'ppo_autosave_ssc_MlpPolicy_folowTrajs')
         self.best_mean_reward = -np.inf
 
     def _init_callback(self) -> None:
@@ -77,26 +120,30 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
 
 env = RacingEnv(EnvConfig.__dict__, SimulatorConfig.__dict__)
+
 env.make()
 # print(env.reset())
 # check_env(env)
 
 log_dir = 'monitor.csv'
-env = Monitor(env, log_dir)
 
+
+env = Monitor(env, log_dir)
+env = FrameSkipWrapper(env, 4)
+env = ActionEnhancer(env)
 log_dir = ''
 callback = SaveOnBestTrainingRewardCallback(check_freq=256, log_dir=log_dir)
 
 # net_arch=[dict(pi=[64, 64, 32], vf=[64, 64, 32])]
-net_arch=[dict(pi=[32, 32], vf=[32, 32])]
+net_arch=[dict(pi=[256, 256], vf=[128, 128])]
 
 log_path = os.path.join("ssc_learning_logs")
 
-# model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_path, policy_kwargs={'net_arch': net_arch})
+# model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_path, policy_kwargs={'net_arch': net_arch}, device = 'cpu')
 
 
 try:
-    model = PPO.load('ppo_autosave_ssc.zip')
+    model = PPO.load('ppo_autosave_ssc_MlpPolicy_folowTrajs.zip', device = 'cpu')
     model.set_env(env)
     model.learn(total_timesteps=300000000, callback=callback)
 

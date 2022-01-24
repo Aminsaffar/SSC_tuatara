@@ -13,7 +13,7 @@ class EnvConfig(object):
     n_eval_laps = 1
     max_timesteps = 5000
     obs_delay = 0.1
-    not_moving_timeout = 100
+    not_moving_timeout = 10
     reward_pol = "custom"
     provide_waypoints = False
     reward_kwargs = {
