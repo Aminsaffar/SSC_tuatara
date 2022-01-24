@@ -139,11 +139,11 @@ net_arch=[dict(pi=[256, 256], vf=[128, 128])]
 
 log_path = os.path.join("ssc_learning_logs")
 
-model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_path, policy_kwargs={'net_arch': net_arch}, device = 'cpu')
+# model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_path, policy_kwargs={'net_arch': net_arch}, device = 'cpu')
 
 
 try:
-    # model = PPO.load('ppo_autosave_ssc_MlpPolicy_folowTrajs.zip', device = 'cpu')
+    model = PPO.load('ppo_autosave_ssc_MlpPolicy_folowTrajs.zip', device = 'cpu')
     model.set_env(env)
     model.learn(total_timesteps=300000000, callback=callback)
 

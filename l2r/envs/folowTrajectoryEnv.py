@@ -261,8 +261,8 @@ class RacingEnv(env.RacingEnv):
         
         # print(v)
 
-        if(v < 5 and self.maxV > 10):
-            is_complete = True
-            print("early stop!!")
+        # if(v < 5 and self.maxV > 10):
+        #     is_complete = True
+        #     print("early stop!!")
 
         return is_complete, info
