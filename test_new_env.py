@@ -1,10 +1,11 @@
 # from l2r.envs.env import RacingEnv
-from l2r.envs.folowTrajectoryEnv import RacingEnv
+from l2r.envs.folowTrajectoryEnv_withVisionGuide import RacingEnv
 from config import SubmissionConfig, EnvConfig, SimulatorConfig
 from stable_baselines3.common.env_checker import check_env
 import gym
 from gym import Env
 from gym.spaces import Box
+
 
 import time
 import os
@@ -13,6 +14,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from stable_baselines3 import PPO
+from stable_baselines3 import SAC
+
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
@@ -24,7 +27,21 @@ from stable_baselines3.common.monitor import Monitor
 
 
 from gym import Wrapper
+from gym import spaces
 
+class NormalizeWrapper(gym.ObservationWrapper):
+    def __init__(self, env=None):
+        super(NormalizeWrapper, self).__init__(env)
+        self.obs_lo = self.observation_space.low[0, 0, 0]
+        self.obs_hi = self.observation_space.high[0, 0, 0]
+        obs_shape = self.observation_space.shape
+        self.observation_space = spaces.Box(0.0, 1.0, obs_shape, dtype=np.float32)
+
+    def observation(self, obs):
+        if self.obs_lo == 0.0 and self.obs_hi == 1.0:
+            return obs
+        else:
+            return (obs - self.obs_lo) / (self.obs_hi - self.obs_lo)
 
 class FrameSkipWrapper(Wrapper):
     '''
@@ -81,7 +98,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         super(SaveOnBestTrainingRewardCallback, self).__init__(verbose)
         self.check_freq = check_freq
         self.log_dir = log_dir
-        self.save_path = os.path.join(log_dir, 'ppo_autosave_ssc_MlpPolicy_folowTrajs')
+        self.save_path = os.path.join(log_dir, 'ppo_autosave_ssc_MlpPolicy_folowTrajs_SAC')
         self.best_mean_reward = -np.inf
 
     def _init_callback(self) -> None:
@@ -111,6 +128,8 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
                   if self.verbose > 0:
                     print("Saving new best model to {}".format(self.save_path))
                   self.model.save(self.save_path)
+                  model.save_replay_buffer("sac_replaybuffer")
+
 
         return True
 
@@ -129,26 +148,39 @@ log_dir = 'monitor.csv'
 
 
 env = Monitor(env, log_dir)
-env = FrameSkipWrapper(env, 4)
-env = ActionEnhancer(env)
+# env = FrameSkipWrapper(env, 4)
+# env = ActionEnhancer(env)
+# env = NormalizeWrapper(env)
 log_dir = ''
 callback = SaveOnBestTrainingRewardCallback(check_freq=256, log_dir=log_dir)
 
 # net_arch=[dict(pi=[64, 64, 32], vf=[64, 64, 32])]
-net_arch=[dict(pi=[256, 256], vf=[128, 128])]
+# net_arch=[dict(pi=[256, 256], vf=[256, 256])]
 
 log_path = os.path.join("ssc_learning_logs")
 
 # model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_path, policy_kwargs={'net_arch': net_arch}, device = 'cpu')
+# model = SAC("MlpPolicy", env, verbose=1, tensorboard_log=log_path, device = 'cpu', uffer_size=6000000)
 
 
-try:
-    model = PPO.load('ppo_autosave_ssc_MlpPolicy_folowTrajs.zip', device = 'cpu')
-    model.set_env(env)
-    model.learn(total_timesteps=300000000, callback=callback)
+# try:
+#     # model = PPO.load('ppo_autosave_ssc_MlpPolicy_folowTrajs.zip', device = 'cpu')
+#     model = SAC.load('ppo_autosave_ssc_MlpPolicy_folowTrajs_SAC.zip', device = 'cpu')
 
-except:
-    print("exception happend")
-    print(traceback.format_exc())
+#     model.set_env(env)
+#     model.learn(total_timesteps=30000000000, callback=callback)
+#     model.save_replay_buffer("sac_replaybuffer")
+
+# except:
+#     print("exception happend")
+#     print(traceback.format_exc())
+
+
+model = SAC.load('ppo_autosave_ssc_MlpPolicy_folowTrajs_SAC.zip', device = 'cpu')
+
+obs = env.reset()
+while True:
+    action, _states = model.predict(obs)
+    obs, rewards, dones, info = env.step(action)
 
 model.save("ssc_end_of_learning")

@@ -51,6 +51,7 @@ class RacingEnv(env.RacingEnv):
         )
 
         self.maxV = 0
+        self.speedScaler = random.uniform(0.4, 0.99)
         self.trajectoryLog = []
 
         #read csv file with ; as delimiter and # as comment and ["#x_m","y_m"] as column names
@@ -130,7 +131,8 @@ class RacingEnv(env.RacingEnv):
         trajectoryDir = "/media/delta/036b2c9b-20f9-456a-9f77-583828a737f7/EnvTrajectory/"
         os.makedirs(trajectoryDir, exist_ok=True)
         filename = trajectoryDir + datetime.utcnow().strftime('%Y-%m-%d %H-%M-%S %f') + ".npy"
-        # np.save(filename,  self.trajectoryLog)    
+        # np.save(filename,  self.trajectoryLog)
+        self.speedScaler = random.uniform(0.4, 0.99)
         self.trajectoryLog = []
 
         self.maxV = 0
@@ -182,7 +184,11 @@ class RacingEnv(env.RacingEnv):
         xm = self.path[i][1]
         ym = self.path[i][2]
 
-        
+        nix = (self.nearest_idx) % self.n_indices #:_)
+        centerx, centery = self.centerline_arr[nix]
+
+        deltaTocenter = math.sqrt(((centerx - cur_x) ** 2) + ((centery - cur_y) ** 2))
+
         psi_rad = -1 * self.path[i][3]
         if ((psi_rad - pose[12]) > 1.5) or ((psi_rad - pose[12]) < -1.5):
             if psi_rad < 0:
@@ -195,19 +201,32 @@ class RacingEnv(env.RacingEnv):
         ax = self.path[i][6]
 
         # vx = vx / 3.0
-        vx = vx * random.uniform(0.2, 0.5)
+        # vx = vx * random.uniform(0.2, 0.5)
+        vx = vx * self.speedScaler
 
         pose[16] = pose[16] - xm
         pose[15] = pose[15] - ym
 
         pose[17] = psi_rad
-        pose = np.concatenate([pose, [kappa, vx, ax]])
+        deltarad = psi_rad - pose[12]
+        # pose = np.concatenate([pose, [kappa, vx, ax]])
+        pose = np.concatenate([pose, [deltaTocenter, vx, ax]])
+
         # pose = self.obs_scallar(pose)
+        pose = np.float32(pose)
         return (pose, self.imgs)
 
     def getRewardBasedOnTrajectory(self, pose):
         deltax = pose[16]
         deltay = pose[15]
+
+        penalize = 0
+
+        # print(pose[30])
+        if pose[30] >= 4:
+            # return -4.0
+            # penalize += 4.0
+            penalize = pose[30]
 
         psi_rad = pose[17]
         rad = pose[12]
@@ -216,7 +235,8 @@ class RacingEnv(env.RacingEnv):
 
         deltaSpeed = pose[31] - pose[3]
         if pose[3] <= 0:
-            return -4.0
+            # return -4.0
+            penalize += 4.0
         # print(pose[3])
 
         error_speed =  (deltaSpeed ** 2)    / 200.0
@@ -227,6 +247,7 @@ class RacingEnv(env.RacingEnv):
         error  =  error_y + error_theta +  error_speed
 
         r = (2.0 - error) / 2.0
+        r = r - penalize
         # print(r, error)
         return r
 
