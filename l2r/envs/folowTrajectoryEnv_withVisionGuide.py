@@ -107,8 +107,6 @@ class RacingEnv(env.RacingEnv):
 
     def step(self, action):
         observation, reward, done, info = env.RacingEnv.step(self, action)  # update the simulator
-        _data, _imgs = observation
-        
         #log trajectory
         self.trajectoryLog.append(
             {
@@ -119,6 +117,9 @@ class RacingEnv(env.RacingEnv):
                 "info" : info
             }
         );
+        
+        observation = self._observe2(observation)
+        _data, _imgs = observation
         observation = _data
         reward = self.getRewardBasedOnTrajectory(_data)
         return observation, reward, done, info
@@ -136,15 +137,19 @@ class RacingEnv(env.RacingEnv):
         self.trajectoryLog = []
 
         self.maxV = 0
-        observation = env.RacingEnv.reset(self, level, random_pos, segment_pos)
+        observation, temp = env.RacingEnv.reset(self, level, random_pos, segment_pos)
+        observation = self._observe2(observation)
         _data, _imgs = observation
-        observation = _data[0]
+        
+        # observation = _data[0]
         # print(observation)
-        return observation
+        return _data
 
 
-    def _observe(self):
-        pose, self.imgs = env.RacingEnv._observe(self)
+    def _observe2(self, observation):
+        # pose, self.imgs = env.RacingEnv._observe(self)
+        pose, self.imgs = observation
+
 
         # enu_x, enu_y, enu_z = pose[16], pose[15], pose[17] 
 
@@ -172,7 +177,7 @@ class RacingEnv(env.RacingEnv):
 
         cur_x , cur_y, cur_z = pose[16], pose[15], pose[17]
         # ["s_m", "x_m", "y_m", "psi_rad", "kappa_radpm", "vx_mps", "ax_mps2"]
-        i = self.pathTree.query([cur_x ,cur_y])[1]
+        main_i = i = self.pathTree.query([cur_x ,cur_y])[1]
         i = i + 3
         i = i % len(self.path)
         # print(path[idx])
@@ -203,23 +208,34 @@ class RacingEnv(env.RacingEnv):
         # vx = vx / 3.0
         # vx = vx * random.uniform(0.2, 0.5)
         vx = vx * self.speedScaler
+        delta_vx = vx - pose[3]
 
-        pose[16] = pose[16] - xm
-        pose[15] = pose[15] - ym
+        deltaXWithRefrence = pose[16] - self.path[main_i][1]
+        deltaYWithRefrence = pose[15] - self.path[main_i][2]
+        deltaToPathPoint = math.sqrt(((deltaXWithRefrence) ** 2) + ((deltaYWithRefrence) ** 2))
 
-        pose[17] = psi_rad
+
+        pose[16] = deltaToPathPoint
+        # pose[15] = pose[15] - ym
+        pose[15] = math.atan(deltaYWithRefrence / deltaXWithRefrence)
+
+        # pose[17] = psi_rad
+        pose[17] = kappa
+
         deltarad = psi_rad - pose[12]
+        pose[12] = deltarad
         # pose = np.concatenate([pose, [kappa, vx, ax]])
-        pose = np.concatenate([pose, [deltaTocenter, vx, ax]])
+        pose = np.concatenate([pose, [deltaTocenter, delta_vx, ax]])
 
         # pose = self.obs_scallar(pose)
-        pose = np.float32(pose)
+        # pose = np.float32(pose)
         return (pose, self.imgs)
 
     def getRewardBasedOnTrajectory(self, pose):
-        deltax = pose[16]
-        deltay = pose[15]
+        # deltax = pose[16]
+        # deltay = pose[15]
 
+        delta_to_path_pint = pose[16]
         penalize = 0
 
         # print(pose[30])
@@ -228,22 +244,25 @@ class RacingEnv(env.RacingEnv):
             # penalize += 4.0
             penalize = pose[30]
 
-        psi_rad = pose[17]
-        rad = pose[12]
+        # psi_rad = pose[17]
+        # rad = pose[12]
+        delta_theta = pose[12]
         # print("             ", psi_rad, rad)
-        delta_theta = psi_rad - rad
+        # delta_theta = psi_rad - rad
 
-        deltaSpeed = pose[31] - pose[3]
+        # deltaSpeed = pose[31] - pose[3]
+        deltaSpeed = pose[31]
         if pose[3] <= 0:
             # return -4.0
             penalize += 4.0
         # print(pose[3])
 
-        error_speed =  (deltaSpeed ** 2)    / 200.0
+        error_speed =  (deltaSpeed)    / 200.0
+        error_speed = error_speed ** 2
         error_theta = math.sqrt(delta_theta ** 2)  / 1.57
-        error_y = (deltay ** 2) / 25.0
+        error_y = (delta_to_path_pint ** 2) / 25.0
         #scale to one
-        # print(error_speed, error_theta, error_y)
+        print(error_speed, error_theta, error_y)
         error  =  error_y + error_theta +  error_speed
 
         r = (2.0 - error) / 2.0

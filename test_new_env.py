@@ -152,7 +152,7 @@ env = Monitor(env, log_dir)
 # env = ActionEnhancer(env)
 # env = NormalizeWrapper(env)
 log_dir = ''
-callback = SaveOnBestTrainingRewardCallback(check_freq=256, log_dir=log_dir)
+callback = SaveOnBestTrainingRewardCallback(check_freq=2560, log_dir=log_dir)
 
 # net_arch=[dict(pi=[64, 64, 32], vf=[64, 64, 32])]
 # net_arch=[dict(pi=[256, 256], vf=[256, 256])]
@@ -160,27 +160,29 @@ callback = SaveOnBestTrainingRewardCallback(check_freq=256, log_dir=log_dir)
 log_path = os.path.join("ssc_learning_logs")
 
 # model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=log_path, policy_kwargs={'net_arch': net_arch}, device = 'cpu')
-# model = SAC("MlpPolicy", env, verbose=1, tensorboard_log=log_path, device = 'cpu', uffer_size=6000000)
+model = SAC("MlpPolicy", env, verbose=1, tensorboard_log=log_path, device = 'cpu', buffer_size=6000000)
 
 
-# try:
-#     # model = PPO.load('ppo_autosave_ssc_MlpPolicy_folowTrajs.zip', device = 'cpu')
-#     model = SAC.load('ppo_autosave_ssc_MlpPolicy_folowTrajs_SAC.zip', device = 'cpu')
+try:
+    # model = PPO.load('ppo_autosave_ssc_MlpPolicy_folowTrajs.zip', device = 'cpu')
+    # model = SAC.load('ppo_autosave_ssc_MlpPolicy_folowTrajs_SAC.zip', device = 'cpu')
 
-#     model.set_env(env)
-#     model.learn(total_timesteps=30000000000, callback=callback)
-#     model.save_replay_buffer("sac_replaybuffer")
+    model.set_env(env)
+    model.learn(total_timesteps=30000000000, callback=callback)
+    model.save_replay_buffer("sac_replaybuffer")
 
-# except:
-#     print("exception happend")
-#     print(traceback.format_exc())
+except:
+    print("exception happend")
+    print(traceback.format_exc())
 
 
-model = SAC.load('ppo_autosave_ssc_MlpPolicy_folowTrajs_SAC.zip', device = 'cpu')
+# model = SAC.load('ppo_autosave_ssc_MlpPolicy_folowTrajs_SAC.zip', device = 'cpu')
 
-obs = env.reset()
-while True:
-    action, _states = model.predict(obs)
-    obs, rewards, dones, info = env.step(action)
+# for i in range(10):
+#     obs = env.reset()
+#     dones = False
+#     while not dones:
+#         action, _states = model.predict(obs)
+#         obs, rewards, dones, info = env.step(action)
 
-model.save("ssc_end_of_learning")
+# model.save("ssc_end_of_learning")
